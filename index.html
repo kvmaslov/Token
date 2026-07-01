@@ -1,51 +1,116 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <meta name="vk:app_id" content="54660622">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>VK Mini App Token</title>
-  
-  <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VK Mini App: Токен для опросов</title>
+    
+    <!-- Подключаем VK Bridge с атрибутом defer (критически важно!) -->
+    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js" defer></script>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        h1 { color: #0077FF; }
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            background-color: #0077FF;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: opacity 0.3s;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        button:not(:disabled):hover { opacity: 0.8; }
+        .status { margin-top: 10px; font-size: 14px; color: #666; }
+        .success-msg { color: #2e7d32; font-weight: bold; }
+    </style>
 </head>
 <body>
-  <h1>Получение токена для опросов</h1>
-  
-  <button id="btn" disabled>Получить токен</button>
-  
-  <p>Токен появится в консоли (F12) и во всплывающем окне.</p>
 
-  <script>
-    // Инициализация VK Bridge
-    VKBridge.on('VKWebAppInitResult', () => {
-      console.log('✅ VK Bridge успешно инициализирован!');
-      
-      const btn = document.getElementById('btn');
-      btn.disabled = false;
-      btn.textContent = '✅ Токен готов, нажать для получения';
+    <h1>Получение токена для опросов</h1>
+    <p>Приложение инициализируется...</p>
+    <p class="status" id="status">Ожидание инициализации VK Bridge...</p>
 
-      btn.addEventListener('click', () => {
-        console.log('🖱️ Кнопка нажата. Отправляем запрос на токен...');
-        
-        VKBridge.send('VKWebAppGetAuthToken', {
-          group_id: 239900520,
-          scope: 'wall,polls,offline'
+    <!-- Кнопка изначально неактивна -->
+    <button id="btn" disabled>
+        🔑 Получить токен сообщества
+    </button>
+
+    <p style="margin-top: 20px; font-size: 12px; color: #999;">
+        Токен появится в консоли браузера (F12) и во всплывающем окне.
+    </p>
+
+    <script>
+        // 1. Проверяем, загрузился ли объект VKBridge
+        if (typeof VKBridge === 'undefined') {
+            console.error('❌ ОШИБКА: Скрипт VK Bridge не загрузился! Проверь подключение в <head>.');
+            document.getElementById('status').textContent = 'Ошибка: VK Bridge не найден. Проверьте консоль.';
+        } else {
+            console.log('✅ VK Bridge найден. Начинаем инициализацию...');
+            
+            // 2. Вешаем слушатель на событие успешной инициализации
+            VKBridge.subscribe('VKWebAppInitResult', () => {
+                console.log('✅ VK Bridge успешно инициализирован!');
+                
+                const btn = document.getElementById('btn');
+                const status = document.getElementById('status');
+                
+                // Активируем кнопку
+                btn.disabled = false;
+                btn.textContent = '✅ Готово! Нажми для получения токена';
+                status.textContent = 'Статус: Инициализировано. Можно получать токен.';
+                status.className = 'status success-msg';
+
+                // 3. Вешаем обработчик клика
+                btn.addEventListener('click', () => {
+                    console.log('🖱️ Кнопка нажата. Запрос токена сообщества...');
+                    
+                    // ВАЖНО: Для опросов в группе нужен именно community token
+                    // group_id: 239900520 (твой ID группы)
+                    VKBridge.send('VKWebAppGetCommunityToken', {
+                        group_id: 239900520,
+                        scope: 'polls,wall,offline'
+                    });
+                });
+            });
+
+            // 4. Отправляем команду на инициализацию (запускает процесс)
+            VKBridge.send('VKWebAppInit');
+        }
+
+        // 5. Обработчик результата получения токена
+        VKBridge.on('VKWebAppGetCommunityTokenResult', (e) => {
+            const token = e.detail.access_token;
+            console.log('🔑 ТОКЕН СООБЩЕСТВА ДЛЯ N8N:', token);
+            alert('Скопируй токен из консоли (F12 -> Console):\n\n' + token);
         });
-      });
-    });
 
-    // Обработка успешного получения токена
-    VKBridge.on('VKWebAppGetAuthTokenResult', (e) => {
-      const token = e.detail.access_token;
-      console.log('🔑 ТОКЕН ДЛЯ N8N:', token);
-      alert('Скопируй токен из консоли (F12):\n' + token);
-    });
-
-    // Обработка любых ошибок
-    VKBridge.on('VKWebAppError', (e) => {
-      console.error('❌ Ошибка VK Bridge:', e);
-      alert('Ошибка: ' + JSON.stringify(e.detail));
-    });
-  </script>
+        // 6. Обработчик ошибок
+        VKBridge.on('VKWebAppError', (e) => {
+            console.error('❌ Ошибка VK Bridge:', e);
+            const status = document.getElementById('status');
+            status.textContent = 'Ошибка: ' + (e.detail?.error_description || 'Неизвестная ошибка');
+            status.className = 'status';
+            alert('Произошла ошибка при получении токена. Смотри консоль (F12).');
+        });
+    </script>
 </body>
 </html>
