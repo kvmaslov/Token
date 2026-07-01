@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VK Mini App: Токен для опросов</title>
     
-    <!-- Подключаем VK Bridge с атрибутом defer (критически важно!) -->
-    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js" defer></script>
+    <!-- ВАЖНО: Используем версию @2 для стабильности -->
+    <script src="https://unpkg.com/@vkontakte/vk-bridge@2/dist/browser.min.js" defer></script>
 
     <style>
         body {
@@ -41,50 +41,53 @@
         button:not(:disabled):hover { opacity: 0.8; }
         .status { margin-top: 10px; font-size: 14px; color: #666; }
         .success-msg { color: #2e7d32; font-weight: bold; }
+        .error-msg { color: #d32f2f; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <h1>Получение токена для опросов</h1>
     <p>Приложение инициализируется...</p>
-    <p class="status" id="status">Ожидание инициализации VK Bridge...</p>
+    <p class="status" id="status">Ожидание загрузки VK Bridge...</p>
 
-    <!-- Кнопка изначально неактивна -->
     <button id="btn" disabled>
         🔑 Получить токен сообщества
     </button>
 
     <p style="margin-top: 20px; font-size: 12px; color: #999;">
-        Токен появится в консоли браузера (F12) и во всплывающем окне.
+        Проверяй консоль (F12) для диагностики.
     </p>
 
     <script>
-        // 1. Проверяем, загрузился ли объект VKBridge
+        // Функция для безопасного обновления статуса
+        const updateStatus = (text, className = 'status') => {
+            const el = document.getElementById('status');
+            el.textContent = text;
+            el.className = className;
+        };
+
+        // 1. Проверка наличия объекта сразу после загрузки DOM (благодаря defer)
         if (typeof VKBridge === 'undefined') {
-            console.error('❌ ОШИБКА: Скрипт VK Bridge не загрузился! Проверь подключение в <head>.');
-            document.getElementById('status').textContent = 'Ошибка: VK Bridge не найден. Проверьте консоль.';
+            console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Объект VKBridge не создан.');
+            console.error('Причина 1: Скрипт не загрузился (блокировщик рекламы / CDN недоступен).');
+            console.error('Причина 2: Ошибка в пути к файлу script src.');
+            updateStatus('Ошибка: VK Bridge не найден. Проверьте консоль (F12).', 'error-msg');
         } else {
-            console.log('✅ VK Bridge найден. Начинаем инициализацию...');
-            
-            // 2. Вешаем слушатель на событие успешной инициализации
+            console.log('✅ VK Bridge успешно загружен в память браузера.');
+            updateStatus('VK Bridge загружен. Инициализация...');
+
+            // 2. Подписка на событие инициализации
             VKBridge.subscribe('VKWebAppInitResult', () => {
                 console.log('✅ VK Bridge успешно инициализирован!');
+                updateStatus('Статус: Инициализировано. Готово к работе.', 'success-msg');
                 
                 const btn = document.getElementById('btn');
-                const status = document.getElementById('status');
-                
-                // Активируем кнопку
                 btn.disabled = false;
                 btn.textContent = '✅ Готово! Нажми для получения токена';
-                status.textContent = 'Статус: Инициализировано. Можно получать токен.';
-                status.className = 'status success-msg';
 
-                // 3. Вешаем обработчик клика
+                // 3. Обработчик кнопки
                 btn.addEventListener('click', () => {
-                    console.log('🖱️ Кнопка нажата. Запрос токена сообщества...');
-                    
-                    // ВАЖНО: Для опросов в группе нужен именно community token
-                    // group_id: 239900520 (твой ID группы)
+                    console.log('🖱️ Запрос токена сообщества...');
                     VKBridge.send('VKWebAppGetCommunityToken', {
                         group_id: 239900520,
                         scope: 'polls,wall,offline'
@@ -92,24 +95,23 @@
                 });
             });
 
-            // 4. Отправляем команду на инициализацию (запускает процесс)
+            // 4. Запуск инициализации
+            console.log('📡 Отправляем команду VKWebAppInit...');
             VKBridge.send('VKWebAppInit');
         }
 
-        // 5. Обработчик результата получения токена
+        // 5. Обработка результата токена
         VKBridge.on('VKWebAppGetCommunityTokenResult', (e) => {
             const token = e.detail.access_token;
-            console.log('🔑 ТОКЕН СООБЩЕСТВА ДЛЯ N8N:', token);
-            alert('Скопируй токен из консоли (F12 -> Console):\n\n' + token);
+            console.log('🔑 ТОКЕН ПОЛУЧЕН:', token);
+            alert('Токен скопирован в консоль (F12):\n\n' + token);
         });
 
-        // 6. Обработчик ошибок
+        // 6. Обработка ошибок
         VKBridge.on('VKWebAppError', (e) => {
-            console.error('❌ Ошибка VK Bridge:', e);
-            const status = document.getElementById('status');
-            status.textContent = 'Ошибка: ' + (e.detail?.error_description || 'Неизвестная ошибка');
-            status.className = 'status';
-            alert('Произошла ошибка при получении токена. Смотри консоль (F12).');
+            console.error('❌ Ошибка VK Bridge:', e.detail);
+            updateStatus('Ошибка приложения: ' + (e.detail?.error_description || 'Неизвестная ошибка'), 'error-msg');
+            alert('Произошла ошибка. Подробности в консоли (F12).');
         });
     </script>
 </body>
