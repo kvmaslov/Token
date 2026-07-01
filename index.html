@@ -2,11 +2,10 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="vk:app_id" content="54660622">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>VK Mini App Token</title>
   
-  <!-- ✅ ИСПРАВЛЕНИЕ: добавлен атрибут defer. 
-       Это заставляет браузер ждать загрузки библиотеки перед выполнением любого JS-кода на странице -->
   <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js" defer></script>
 </head>
 <body>
@@ -17,10 +16,7 @@
   <p>Токен появится в консоли (F12) и во всплывающем окне.</p>
 
   <script>
-    // Так как мы добавили defer в head, здесь мы можем смело использовать VKBridge.
-    // Он гарантированно будет определен к моменту запуска этого кода.
-
-    // 1. Ждём инициализации VK Bridge
+    // Инициализация VK Bridge
     VKBridge.on('VKWebAppInitResult', () => {
       console.log('✅ VK Bridge успешно инициализирован!');
       
@@ -38,14 +34,14 @@
       });
     });
 
-    // 2. Обработка успешного получения токена
+    // Обработка успешного получения токена
     VKBridge.on('VKWebAppGetAuthTokenResult', (e) => {
       const token = e.detail.access_token;
       console.log('🔑 ТОКЕН ДЛЯ N8N:', token);
       alert('Скопируй токен из консоли (F12):\n' + token);
     });
 
-    // 3. Обработка любых ошибок
+    // Обработка любых ошибок
     VKBridge.on('VKWebAppError', (e) => {
       console.error('❌ Ошибка VK Bridge:', e);
       alert('Ошибка: ' + JSON.stringify(e.detail));
