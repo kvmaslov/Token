@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VK Mini App: Токен для опросов</title>
     
-    <!-- ВАЖНО: Подключаем локальную копию библиотеки. 
-         Файл vk-bridge.min.js должен лежать в той же папке, что и index.html. -->
+    <!-- Подключаем локальный файл. Имя должно точно совпадать с файлом в репозитории -->
     <script src="vk-bridge.min.js" defer></script>
 
     <style>
@@ -68,18 +67,13 @@
             }
         };
 
-        // Ждем загрузки DOM благодаря атрибуту defer в теге script выше
+        // Проверка наличия VKBridge после загрузки скрипта (благодаря defer)
         if (typeof VKBridge === 'undefined') {
             console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: VKBridge не определен!');
-            console.error('Причина: Файл vk-bridge.min.js не найден или не загружен.');
-            console.log('🔍 Инструкция:');
-            console.log('1. Убедись, что файл vk-bridge.min.js загружен в репозиторий.');
-            console.log('2. Убедись, что он лежит в той же папке, что и index.html.');
-            console.log('3. Проверь вкладку Network (Сеть) в консоли — ищи красный файл vk-bridge.min.js');
-            
+            console.error('Причина: Файл vk-bridge.min.js не найден или имя не совпадает.');
             updateStatus('Ошибка: VK Bridge не загружен. См. консоль (F12).', 'error-msg');
         } else {
-            console.log('✅ VK Bridge успешно загружен из локальной копии!');
+            console.log('✅ VK Bridge успешно загружен!');
             updateStatus('VK Bridge загружен. Инициализация...', 'success-msg');
 
             // Подписка на событие инициализации
@@ -110,7 +104,7 @@
         VKBridge.on('VKWebAppGetCommunityTokenResult', (e) => {
             const token = e.detail.access_token;
             console.log('🔑 ТОКЕН ПОЛУЧЕН:', token);
-            alert('Токен скопирован в консоль (F12):\n\n' + token);
+            alert('Токен в консоли (F12):\n\n' + token);
         });
 
         // Обработка ошибок от VK
