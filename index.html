@@ -2,28 +2,27 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>VK Mini App Token</title>
-  <script src="https://vk.com/js/api/bridge/vkbridge.js"></script>
+  <!-- ✅ ПРАВИЛЬНОЕ ПОДКЛЮЧЕНИЕ БИБЛИОТЕКИ -->
+  <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
 </head>
 <body>
   <h1>Получение токена для опросов</h1>
   
-  <!-- Кнопка изначально неактивна (это нормально!) -->
   <button id="btn" disabled>Получить токен</button>
   
   <p>Токен появится в консоли (F12) и во всплывающем окне.</p>
 
   <script>
-    // 1. Ждём, пока VK Bridge сам сообщит о готовности
+    // 1. Ждём инициализации
     VKBridge.on('VKWebAppInitResult', () => {
       console.log('✅ VK Bridge успешно инициализирован!');
       
-      // 2. Находим кнопку и делаем её активной
       const btn = document.getElementById('btn');
       btn.disabled = false;
       btn.textContent = '✅ Токен готов, нажать для получения';
 
-      // 3. Вешаем обработчик клика
       btn.addEventListener('click', () => {
         console.log('🖱️ Кнопка нажата. Отправляем запрос на токен...');
         
@@ -34,14 +33,14 @@
       });
     });
 
-    // 4. Обработка успешного получения токена (ИСПРАВЛЕНО: VKWebApp, а не VKWebAnn)
+    // 2. Обработка токена
     VKBridge.on('VKWebAppGetAuthTokenResult', (e) => {
       const token = e.detail.access_token;
       console.log('🔑 ТОКЕН ДЛЯ N8N:', token);
       alert('Скопируй токен из консоли (F12):\n' + token);
     });
 
-    // 5. Обработка любых ошибок (чтобы ты видел, что пошло не так)
+    // 3. Обработка ошибок
     VKBridge.on('VKWebAppError', (e) => {
       console.error('❌ Ошибка VK Bridge:', e);
       alert('Ошибка: ' + JSON.stringify(e.detail));
