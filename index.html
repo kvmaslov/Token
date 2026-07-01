@@ -1,35 +1,48 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <title>VK Mini App Token</title>
-    <script src="https://vk.com/js/api/bridge/vkbridge.js"></script>
-  </head>
-  <body>
-    <h1>Получение токена для опросов</h1>
-    <button id="btn">Получить токен</button>
-    <p>Токен появится в консоли (F12) и во всплывающем окне.</p>
+<head>
+  <meta charset="utf-8">
+  <title>VK Mini App Token</title>
+  <script src="https://vk.com/js/api/bridge/vkbridge.js"></script>
+</head>
+<body>
+  <h1>Получение токена для опросов</h1>
+  <button id="btn" disabled>Получить токен</button>
+  <p>Токен появится в консоли (F12) и во всплывающем окне.</p>
 
-    <script>
-      VKBridge.send('VKWebAppInit');
+  <script>
+    // 1. Сначала ждём, пока VK Bridge полностью инициализируется
+    VKBridge.on('VKWebAppInitResult', () => {
+      console.log('VK Bridge готов!');
+      
+      // 2. Теперь включаем кнопку, потому что всё готово к работе
+      const btn = document.getElementById('btn');
+      btn.disabled = false;
+      btn.textContent = 'Получить токен';
 
-      document.getElementById('btn').addEventListener('click', () => {
+      // 3. Вешаем обработчик клика только после инициализации
+      btn.addEventListener('click', () => {
+        console.log('Кнопка нажата, запрашиваем токен...');
+        
         VKBridge.send('VKWebAppGetAuthToken', {
-          group_id: 239900520, // <-- ВСТАВЬ СЮДА ID СВОЕГО СООБЩЕСТВА (только цифры)
+          group_id: 239900520, // Твой ID сообщества
           scope: 'wall,polls,offline'
         });
       });
+    });
 
-      VKBridge.on('VKWebAppGetAuthTokenResult', (e) => {
-        const token = e.detail.access_token;
-        console.log('ТОКЕН ДЛЯ N8N:', token);
-        alert('Скопируй токен из консоли (F12):\n' + token);
-      });
+    // 4. Обработчик успешного получения токена
+    VKBridge.on('VKWebAppGetAuthTokenResult', (e) => {
+      const token = e.detail.access_token;
+      console.log('ТОКЕН ДЛЯ N8N:', token);
+      alert('Скопируй токен из консоли (F12):\n' + token);
+    });
 
-      VKBridge.on('VKWebAppError', (e) => {
-        console.error('Ошибка VK Bridge:', e);
-        alert('Ошибка: ' + JSON.stringify(e.detail));
-      });
-    </script>
-  </body>
+    // 5. Обработчик ошибок
+    VKBridge.on('VKWebAppError', (e) => {
+      console.error('Ошибка VK Bridge:', e);
+      alert('Ошибка: ' + JSON.stringify(e.detail));
+    });
+  </script>
+</body>
 </html>
