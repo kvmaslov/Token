@@ -7,40 +7,43 @@
 </head>
 <body>
   <h1>Получение токена для опросов</h1>
+  
+  <!-- Кнопка изначально неактивна (это нормально!) -->
   <button id="btn" disabled>Получить токен</button>
+  
   <p>Токен появится в консоли (F12) и во всплывающем окне.</p>
 
   <script>
-    // 1. Сначала ждём, пока VK Bridge полностью инициализируется
+    // 1. Ждём, пока VK Bridge сам сообщит о готовности
     VKBridge.on('VKWebAppInitResult', () => {
-      console.log('VK Bridge готов!');
+      console.log('✅ VK Bridge успешно инициализирован!');
       
-      // 2. Теперь включаем кнопку, потому что всё готово к работе
+      // 2. Находим кнопку и делаем её активной
       const btn = document.getElementById('btn');
       btn.disabled = false;
-      btn.textContent = 'Получить токен';
+      btn.textContent = '✅ Токен готов, нажать для получения';
 
-      // 3. Вешаем обработчик клика только после инициализации
+      // 3. Вешаем обработчик клика
       btn.addEventListener('click', () => {
-        console.log('Кнопка нажата, запрашиваем токен...');
+        console.log('🖱️ Кнопка нажата. Отправляем запрос на токен...');
         
         VKBridge.send('VKWebAppGetAuthToken', {
-          group_id: 239900520, // Твой ID сообщества
+          group_id: 239900520,
           scope: 'wall,polls,offline'
         });
       });
     });
 
-    // 4. Обработчик успешного получения токена
+    // 4. Обработка успешного получения токена (ИСПРАВЛЕНО: VKWebApp, а не VKWebAnn)
     VKBridge.on('VKWebAppGetAuthTokenResult', (e) => {
       const token = e.detail.access_token;
-      console.log('ТОКЕН ДЛЯ N8N:', token);
+      console.log('🔑 ТОКЕН ДЛЯ N8N:', token);
       alert('Скопируй токен из консоли (F12):\n' + token);
     });
 
-    // 5. Обработчик ошибок
+    // 5. Обработка любых ошибок (чтобы ты видел, что пошло не так)
     VKBridge.on('VKWebAppError', (e) => {
-      console.error('Ошибка VK Bridge:', e);
+      console.error('❌ Ошибка VK Bridge:', e);
       alert('Ошибка: ' + JSON.stringify(e.detail));
     });
   </script>
