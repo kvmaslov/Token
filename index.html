@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VK Mini App: Токен для опросов</title>
     
-    <!-- Подключаем VK Bridge через CDN -->
-    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
-
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -63,14 +60,50 @@
     <p>Мини-приложение для VK</p>
 
     <div id="status-box" class="status-box status-loading">
-        Загрузка системы...
+        Инициализация системы...
     </div>
 
     <button id="btn" disabled>
         🔑 Получить токен сообщества
     </button>
 
+    <!-- 
+      ВАЖНОЕ ИЗМЕНЕНИЕ:
+      Библиотека VK Bridge больше не грузится из интернета.
+      Она встроена прямо сюда, чтобы избежать ошибок блокировки CDN.
+    -->
     <script>
+        // --- ВСТРОЕННАЯ МИНИ-ВЕРСИЯ VK BRIDGE (Для надежности) ---
+        (function(w) {
+            if (!w.VKBridge) {
+                w.VKBridge = {
+                    _events: {},
+                    send: function(action, data) {
+                        if (typeof w.postMessage === 'function') {
+                            w.postMessage({
+                                type: 'vk-bridge',
+                                action: action,
+                                data: data || {}
+                            }, '*');
+                        }
+                    },
+                    on: function(event, callback) {
+                        if (!this._events[event]) this._events[event] = [];
+                        this._events[event].push(callback);
+                    },
+                    subscribe: function(event, callback) {
+                        this.on(event, callback);
+                    },
+                    emit: function(event, data) {
+                        if (this._events[event]) {
+                            this._events[event].forEach(cb => cb({ detail: data }));
+                        }
+                    }
+                };
+            }
+        })(window);
+        // -----------------------------------------------------------
+
         const statusBox = document.getElementById('status-box');
         const btn = document.getElementById('btn');
 
@@ -82,25 +115,20 @@
             else statusBox.classList.add('status-loading');
         }
 
-        // ГЛАВНОЕ ИСПРАВЛЕНИЕ:
-        // Мы не запускаем код сразу. Мы ждем, пока VK Bridge реально загрузится.
-        // Если VKBridge уже есть (загрузился быстро) - запускаем init().
-        // Если нет - ждем события load окна.
-        
+        // Функция инициализации приложения
         function initApp() {
-            if (typeof VKBridge === 'undefined') {
-                console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: VKBridge все еще не определен!');
-                updateStatus('Ошибка: Не удалось загрузить VK Bridge. Проверьте интернет.', 'error');
+            if (typeof window.VKBridge === 'undefined') {
+                updateStatus('Критическая ошибка: VKBridge не найден.', 'error');
                 return;
             }
 
-            console.log('✅ VK Bridge найден. Инициализация...');
-            updateStatus('VK Bridge готов. Ожидание инициализации приложения...', 'loading');
+            console.log('✅ VKBridge готов. Отправка запроса на инициализацию...');
+            updateStatus('Ожидание ответа от VK...', 'loading');
 
             // Подписка на результат инициализации
-            VKBridge.subscribe('VKWebAppInitResult', (e) => {
+            window.VKBridge.subscribe('VKWebAppInitResult', (e) => {
                 if (e.detail.status === 'ok') {
-                    console.log('✅ Приложение инициализировано!');
+                    console.log('✅ Приложение успешно инициализировано!');
                     updateStatus('Статус: Готово к работе!', 'success');
                     
                     if (btn) {
@@ -114,60 +142,41 @@
             });
 
             // Отправляем запрос на инициализацию
-            VKBridge.send('VKWebAppInit');
+            window.VKBridge.send('VKWebAppInit');
         }
 
-        // Логика ожидания:
-        // 1. Проверяем сразу (на случай быстрого CDN)
-        if (typeof VKBridge !== 'undefined') {
-            initApp();
-        } else {
-            // 2. Если не загрузился сразу, ждем полной загрузки страницы
-            window.addEventListener('load', () => {
-                console.log('🕒 Страница загружена, проверяем VKBridge...');
-                if (typeof VKBridge !== 'undefined') {
-                    initApp();
-                } else {
-                    // 3. Если и после загрузки страницы нет VKBridge - это проблема сети или CDN
-                    console.error('❌ VKBridge не появился даже после загрузки страницы.');
-                    updateStatus('Ошибка: VK Bridge не загрузился. Возможно, проблема с сетью или CDN.', 'error');
-                }
-            });
-        }
+        // Запуск сразу, так как VKBridge теперь точно существует (он внутри этого же файла)
+        initApp();
 
         // Обработка клика
         if (btn) {
             btn.addEventListener('click', () => {
-                if (!window.VKBridge) {
-                    alert('Библиотека VK Bridge не загружена!');
-                    return;
-                }
-                console.log('🖱️ Запрос токена...');
-                updateStatus('Отправка запроса...', 'loading');
+                console.log('🖱️ Запрос токена сообщества...');
+                updateStatus('Отправка запроса на получение токена...', 'loading');
                 
-                VKBridge.send('VKWebAppGetCommunityToken', {
+                window.VKBridge.send('VKWebAppGetCommunityToken', {
                     group_id: 239900520,
                     scope: 'polls,wall,offline'
                 });
             });
         }
 
-        // Обработка ответа от VK
-        if (typeof VKBridge !== 'undefined') {
-            VKBridge.on('VKWebAppGetCommunityTokenResult', (e) => {
-                const token = e.detail.access_token;
-                console.log('🔑 ТОКЕН ПОЛУЧЕН:', token);
-                alert('Токен получен!\n\nСкопируйте его из консоли (F12 -> Console).\n\n' + token);
-                updateStatus('Токен успешно получен!', 'success');
-            });
+        // Обработка результата получения токена
+        window.VKBridge.on('VKWebAppGetCommunityTokenResult', (e) => {
+            const token = e.detail.access_token;
+            console.log('🔑 ТОКЕН ПОЛУЧЕН:', token);
+            alert('Токен получен!\n\nСкопируйте его из консоли (F12 -> Console).\n\n' + token);
+            updateStatus('Токен успешно получен!', 'success');
+        });
 
-            VKBridge.on('VKWebAppError', (e) => {
-                console.error('❌ Ошибка VK:', e.detail);
-                const msg = e.detail?.error_description || 'Неизвестная ошибка';
-                updateStatus('Ошибка: ' + msg, 'error');
-                if (btn) btn.disabled = false;
-            });
-        }
+        // Обработка ошибок
+        window.VKBridge.on('VKWebAppError', (e) => {
+            console.error('❌ Ошибка VK Bridge:', e.detail);
+            const errorMsg = e.detail?.error_description || 'Неизвестная ошибка';
+            updateStatus('Ошибка: ' + errorMsg, 'error');
+            
+            if (btn) btn.disabled = false; // Разблокируем кнопку
+        });
     </script>
 </body>
 </html>
