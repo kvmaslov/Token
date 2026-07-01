@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VK Mini App: Токен для опросов</title>
     
-    <!-- ВАЖНО: Используем версию @2 для стабильности -->
-    <script src="https://unpkg.com/@vkontakte/vk-bridge@2/dist/browser.min.js" defer></script>
+    <!-- ИСПРАВЛЕНО: Используем стабильный CDN jsdelivr вместо unpkg -->
+    <script src="https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2/dist/browser.min.js" defer></script>
 
     <style>
         body {
@@ -59,59 +59,58 @@
     </p>
 
     <script>
-        // Функция для безопасного обновления статуса
         const updateStatus = (text, className = 'status') => {
             const el = document.getElementById('status');
-            el.textContent = text;
-            el.className = className;
+            if (el) {
+                el.textContent = text;
+                el.className = className;
+            }
         };
 
-        // 1. Проверка наличия объекта сразу после загрузки DOM (благодаря defer)
+        // Проверка после загрузки DOM
         if (typeof VKBridge === 'undefined') {
-            console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Объект VKBridge не создан.');
-            console.error('Причина 1: Скрипт не загрузился (блокировщик рекламы / CDN недоступен).');
-            console.error('Причина 2: Ошибка в пути к файлу script src.');
-            updateStatus('Ошибка: VK Bridge не найден. Проверьте консоль (F12).', 'error-msg');
+            console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: VKBridge не определен!');
+            console.log('🔍 Что проверить:');
+            console.log('1. Открой вкладку Network в консоли. Найди строку vk-bridge...');
+            console.log('2. Если там красный статус (404/403) — проблема в CDN (сети).');
+            console.log('3. Если файла вообще нет в списке — проверь тег <script> в коде.');
+            
+            updateStatus('Ошибка: VK Bridge не загрузился. См. консоль (F12).', 'error-msg');
         } else {
-            console.log('✅ VK Bridge успешно загружен в память браузера.');
-            updateStatus('VK Bridge загружен. Инициализация...');
+            console.log('✅ VK Bridge успешно загружен!');
+            updateStatus('VK Bridge загружен. Инициализация...', 'success-msg');
 
-            // 2. Подписка на событие инициализации
             VKBridge.subscribe('VKWebAppInitResult', () => {
                 console.log('✅ VK Bridge успешно инициализирован!');
-                updateStatus('Статус: Инициализировано. Готово к работе.', 'success-msg');
+                updateStatus('Статус: Готово к работе.', 'success-msg');
                 
                 const btn = document.getElementById('btn');
-                btn.disabled = false;
-                btn.textContent = '✅ Готово! Нажми для получения токена';
-
-                // 3. Обработчик кнопки
-                btn.addEventListener('click', () => {
-                    console.log('🖱️ Запрос токена сообщества...');
-                    VKBridge.send('VKWebAppGetCommunityToken', {
-                        group_id: 239900520,
-                        scope: 'polls,wall,offline'
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '✅ Готово! Нажми для получения токена';
+                    
+                    btn.addEventListener('click', () => {
+                        console.log('🖱️ Запрос токена...');
+                        VKBridge.send('VKWebAppGetCommunityToken', {
+                            group_id: 239900520,
+                            scope: 'polls,wall,offline'
+                        });
                     });
-                });
+                }
             });
 
-            // 4. Запуск инициализации
-            console.log('📡 Отправляем команду VKWebAppInit...');
             VKBridge.send('VKWebAppInit');
         }
 
-        // 5. Обработка результата токена
         VKBridge.on('VKWebAppGetCommunityTokenResult', (e) => {
             const token = e.detail.access_token;
             console.log('🔑 ТОКЕН ПОЛУЧЕН:', token);
-            alert('Токен скопирован в консоль (F12):\n\n' + token);
+            alert('Токен в консоли (F12):\n\n' + token);
         });
 
-        // 6. Обработка ошибок
         VKBridge.on('VKWebAppError', (e) => {
-            console.error('❌ Ошибка VK Bridge:', e.detail);
-            updateStatus('Ошибка приложения: ' + (e.detail?.error_description || 'Неизвестная ошибка'), 'error-msg');
-            alert('Произошла ошибка. Подробности в консоли (F12).');
+            console.error('❌ Ошибка VK:', e.detail);
+            updateStatus('Ошибка: ' + (e.detail?.error_description || 'Неизвестная ошибка'), 'error-msg');
         });
     </script>
 </body>
